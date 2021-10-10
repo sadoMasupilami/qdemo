@@ -1,17 +1,19 @@
 package at.mklug;
 
 import at.mklug.ressources.Person;
+import org.jboss.logging.Logger;
 import org.jboss.resteasy.annotations.jaxrs.PathParam;
 
 import javax.transaction.Transactional;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
+import javax.ws.rs.*;
+import javax.ws.rs.core.Response;
+import java.net.URI;
 import java.util.List;
 
 @Path("/person")
 public class PersonResource {
+
+    private static final Logger LOG = Logger.getLogger(PersonResource.class);
 
     @GET
     public List<Person> getPeople() {
@@ -26,14 +28,21 @@ public class PersonResource {
 
     @POST
     @Transactional
-    public Person add(Person person) {
+    public Response add(Person person) {
         person.persist();
-        return person;
+        return Response.created(URI.create("/person/" + person.id)).build();
     }
 
     @DELETE
     @Transactional
-    public void delete(Person person) {
-        Person.deleteById(person.id);
+    public Response delete(Person person) {
+        Boolean deleted = Person.deleteById(person.id);
+        if (!deleted) {
+            String message = String.format("DELETE failed, person with id: %s was not found", person.id);
+            LOG.info(message);
+            return Response.status(404, message).build();
+        } else {
+            return Response.ok().build();
+        }
     }
 }
